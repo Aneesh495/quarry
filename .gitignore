@@ -1,0 +1,24 @@
+# Build artifacts and binaries
+bin/quarry
+lib/*.dylib
+lib/*.so
+lib/*.a
+*.o
+*.obj
+
+# Python caches
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Temporary data files and logs
+tmp/
+*.log
+*.tmp
+.DS_Store
+
+# Benchmark artifacts
+bench_results/
