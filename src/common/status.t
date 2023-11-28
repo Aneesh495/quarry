@@ -5,7 +5,6 @@ local C = require("src.common.c").C
 
 local status = {}
 
--- Status codes
 status.OK = 0
 status.SYNTAX_ERROR = 1
 status.TYPE_ERROR = 2
@@ -37,14 +36,14 @@ terra Status:get_message() : &int8
     return &(self.message[0])
 end
 
-terra status.ok() : Status
+local terra ok_fn() : Status
     var s : Status
     s.code = 0
     s.message[0] = 0
     return s
 end
 
-terra status.err(code: int32, msg: &int8) : Status
+local terra err_fn(code: int32, msg: &int8) : Status
     var s : Status
     s.code = code
     if msg ~= nil then
@@ -56,5 +55,7 @@ terra status.err(code: int32, msg: &int8) : Status
     return s
 end
 
+status.ok = ok_fn
+status.err = err_fn
 status.Status = Status
 return status

@@ -2,6 +2,7 @@
 -- Exploits LLVM vector intrinsics and hardware vector lanes for analytical math.
 
 local C = require("src.common.c").C
+local size_t = C.size_t
 
 local simd = {}
 
@@ -9,22 +10,19 @@ simd.VEC4F = vector(float, 4)
 simd.VEC8F = vector(float, 8)
 simd.VEC4D = vector(double, 4)
 
--- Vectorized dot product for 4-wide float vector
-terra simd.dot4f(a: &float, b: &float) : float
+local terra dot4f_fn(a: &float, b: &float) : float
     var va = @[&vector(float, 4)](a)
     var vb = @[&vector(float, 4)](b)
     var prod = va * vb
     return prod[0] + prod[1] + prod[2] + prod[3]
 end
 
--- Vectorized sum for 4-wide float vector
-terra simd.sum4f(a: &float) : float
+local terra sum4f_fn(a: &float) : float
     var va = @[&vector(float, 4)](a)
     return va[0] + va[1] + va[2] + va[3]
 end
 
--- Vectorized L2 squared distance between 4-element arrays
-terra simd.l2_sq4f(a: &float, b: &float) : float
+local terra l2_sq4f_fn(a: &float, b: &float) : float
     var va = @[&vector(float, 4)](a)
     var vb = @[&vector(float, 4)](b)
     var diff = va - vb
@@ -32,10 +30,9 @@ terra simd.l2_sq4f(a: &float, b: &float) : float
     return sq[0] + sq[1] + sq[2] + sq[3]
 end
 
--- Vectorized sum of floats across length N using 4-wide unrolling
-terra simd.sum_array_f32(arr: &float, n: C.size_t) : float
+local terra sum_array_f32_fn(arr: &float, n: size_t) : float
     var total : float = 0.0f
-    var i : C.size_t = 0
+    var i : size_t = 0
     var acc = vector(0.0f, 0.0f, 0.0f, 0.0f)
 
     while i + 4 <= n do
@@ -46,7 +43,6 @@ terra simd.sum_array_f32(arr: &float, n: C.size_t) : float
 
     total = acc[0] + acc[1] + acc[2] + acc[3]
 
-    -- Scalar cleanup tail
     while i < n do
         total = total + arr[i]
         i = i + 1
@@ -55,10 +51,9 @@ terra simd.sum_array_f32(arr: &float, n: C.size_t) : float
     return total
 end
 
--- Vectorized dot product of two float arrays of length N
-terra simd.dot_product_f32(a: &float, b: &float, n: C.size_t) : float
+local terra dot_product_f32_fn(a: &float, b: &float, n: size_t) : float
     var total : float = 0.0f
-    var i : C.size_t = 0
+    var i : size_t = 0
     var acc = vector(0.0f, 0.0f, 0.0f, 0.0f)
 
     while i + 4 <= n do
@@ -77,5 +72,11 @@ terra simd.dot_product_f32(a: &float, b: &float, n: C.size_t) : float
 
     return total
 end
+
+simd.dot4f = dot4f_fn
+simd.sum4f = sum4f_fn
+simd.l2_sq4f = l2_sq4f_fn
+simd.sum_array_f32 = sum_array_f32_fn
+simd.dot_product_f32 = dot_product_f32_fn
 
 return simd

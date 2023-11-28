@@ -3,8 +3,7 @@
 
 local bits = {}
 
--- Population count for 64-bit unsigned integer (Hamming weight)
-terra bits.popcount64(x: uint64) : uint32
+local terra popcount64_fn(x: uint64) : uint32
     var v = x
     v = v - ((v >> 1) and 0x5555555555555555ULL)
     v = (v and 0x3333333333333333ULL) + ((v >> 2) and 0x3333333333333333ULL)
@@ -12,8 +11,7 @@ terra bits.popcount64(x: uint64) : uint32
     return [uint32]((v * 0x0101010101010101ULL) >> 56)
 end
 
--- Population count for 32-bit unsigned integer
-terra bits.popcount32(x: uint32) : uint32
+local terra popcount32_fn(x: uint32) : uint32
     var v = x
     v = v - ((v >> 1) and 0x55555555U)
     v = (v and 0x33333333U) + ((v >> 2) and 0x33333333U)
@@ -21,12 +19,10 @@ terra bits.popcount32(x: uint32) : uint32
     return (v * 0x01010101U) >> 24
 end
 
--- Count trailing zeros in 64-bit word
-terra bits.ctz64(x: uint64) : uint32
+local terra ctz64_fn(x: uint64) : uint32
     if x == 0 then
         return 64
     end
-    -- Use De Bruijn sequence multiplication
     var debruijn : uint64 = 0x03f79d71b4cb0a89ULL
     var index_table : uint8[64]
     index_table[0]  = 0;  index_table[1]  = 1;  index_table[2]  = 48; index_table[3]  = 2;
@@ -51,29 +47,25 @@ terra bits.ctz64(x: uint64) : uint32
     return index_table[hash]
 end
 
--- Test if bit at index is set in a 64-bit bitmap array
-terra bits.is_bit_set(bitmap: &uint64, idx: uint64) : bool
+local terra is_bit_set_fn(bitmap: &uint64, idx: uint64) : bool
     var word_idx = idx >> 6
     var bit_idx = idx and 63ULL
     return ((bitmap[word_idx] >> bit_idx) and 1ULL) ~= 0ULL
 end
 
--- Set bit at index in a 64-bit bitmap array
-terra bits.set_bit(bitmap: &uint64, idx: uint64) : void
+local terra set_bit_fn(bitmap: &uint64, idx: uint64)
     var word_idx = idx >> 6
     var bit_idx = idx and 63ULL
     bitmap[word_idx] = bitmap[word_idx] or (1ULL << bit_idx)
 end
 
--- Clear bit at index in a 64-bit bitmap array
-terra bits.clear_bit(bitmap: &uint64, idx: uint64) : void
+local terra clear_bit_fn(bitmap: &uint64, idx: uint64)
     var word_idx = idx >> 6
     var bit_idx = idx and 63ULL
     bitmap[word_idx] = bitmap[word_idx] and (not (1ULL << bit_idx))
 end
 
--- Bitmask generation for N bits (up to 64)
-terra bits.mask64(num_bits: uint32) : uint64
+local terra mask64_fn(num_bits: uint32) : uint64
     if num_bits >= 64 then
         return 0xFFFFFFFFFFFFFFFFULL
     elseif num_bits == 0 then
@@ -83,8 +75,7 @@ terra bits.mask64(num_bits: uint32) : uint64
     end
 end
 
--- Round up to next power of two
-terra bits.next_pow2(x: uint64) : uint64
+local terra next_pow2_fn(x: uint64) : uint64
     if x <= 1 then return 1 end
     var v = x - 1
     v = v or (v >> 1)
@@ -95,5 +86,14 @@ terra bits.next_pow2(x: uint64) : uint64
     v = v or (v >> 32)
     return v + 1
 end
+
+bits.popcount64 = popcount64_fn
+bits.popcount32 = popcount32_fn
+bits.ctz64 = ctz64_fn
+bits.is_bit_set = is_bit_set_fn
+bits.set_bit = set_bit_fn
+bits.clear_bit = clear_bit_fn
+bits.mask64 = mask64_fn
+bits.next_pow2 = next_pow2_fn
 
 return bits

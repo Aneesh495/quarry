@@ -16,7 +16,7 @@ struct Stopwatch {
     is_running: bool
 }
 
-terra Stopwatch:start() : void
+terra Stopwatch:start()
     var ts : C.timespec
     C.clock_gettime(CLOCK_MONOTONIC, &ts)
     self.start_sec = ts.tv_sec
@@ -26,7 +26,7 @@ terra Stopwatch:start() : void
     self.is_running = true
 end
 
-terra Stopwatch:stop() : void
+terra Stopwatch:stop()
     var ts : C.timespec
     C.clock_gettime(CLOCK_MONOTONIC, &ts)
     self.stop_sec = ts.tv_sec

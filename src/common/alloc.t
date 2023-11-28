@@ -2,6 +2,7 @@
 -- Provides cache line aligned allocation, thread local bump arenas, and tracking.
 
 local C = require("src.common.c").C
+local size_t = C.size_t
 
 local alloc = {}
 
@@ -9,30 +10,33 @@ local alloc = {}
 alloc.CACHE_LINE = 64
 
 -- Aligned memory allocation wrapper
-terra alloc.aligned_alloc(size: C.size_t, alignment: C.size_t) : &opaque
+local terra aligned_alloc_fn(nbytes: size_t, align_val: size_t) : &opaque
     var ptr : &opaque = nil
-    var align_val = alignment
-    if align_val < sizeof(&opaque) then
-        align_val = sizeof(&opaque)
+    var actual_align = align_val
+    if actual_align < 8 then
+        actual_align = 8
     end
-    var res = C.posix_memalign(&ptr, align_val, size)
+    var res = C.posix_memalign(&ptr, actual_align, nbytes)
     if res ~= 0 then
         return nil
     end
     return ptr
 end
 
-terra alloc.aligned_free(ptr: &opaque) : void
+local terra aligned_free_fn(ptr: &opaque)
     if ptr ~= nil then
         C.free(ptr)
     end
 end
 
+alloc.aligned_alloc = aligned_alloc_fn
+alloc.aligned_free = aligned_free_fn
+
 -- Arena block node
 struct ArenaBlock {
     next: &ArenaBlock,
-    capacity: C.size_t,
-    offset: C.size_t,
+    capacity: size_t,
+    offset: size_t,
     data: &uint8
 }
 
@@ -40,11 +44,11 @@ struct ArenaBlock {
 struct Arena {
     current: &ArenaBlock,
     head: &ArenaBlock,
-    default_block_size: C.size_t,
-    total_allocated: C.size_t
+    default_block_size: size_t,
+    total_allocated: size_t
 }
 
-terra Arena:init(default_block_size: C.size_t) : void
+terra Arena:init(default_block_size: size_t)
     self.current = nil
     self.head = nil
     if default_block_size == 0 then
@@ -55,14 +59,14 @@ terra Arena:init(default_block_size: C.size_t) : void
     self.total_allocated = 0
 end
 
-terra Arena:new_block(min_size: C.size_t) : &ArenaBlock
+terra Arena:new_block(min_size: size_t) : &ArenaBlock
     var block_size = self.default_block_size
     if min_size > block_size then
         block_size = min_size
     end
 
     var block_ptr = [&ArenaBlock](C.malloc(sizeof(ArenaBlock)))
-    var raw_data = [&uint8](alloc.aligned_alloc(block_size, alloc.CACHE_LINE))
+    var raw_data = [&uint8](aligned_alloc_fn(block_size, alloc.CACHE_LINE))
 
     block_ptr.next = nil
     block_ptr.capacity = block_size
@@ -73,43 +77,41 @@ terra Arena:new_block(min_size: C.size_t) : &ArenaBlock
     return block_ptr
 end
 
-terra Arena:allocate(size: C.size_t, alignment: C.size_t) : &opaque
-    var align_val = alignment
-    if align_val == 0 then
-        align_val = 8
+terra Arena:allocate(nbytes: size_t, align_val: size_t) : &opaque
+    var actual_align = align_val
+    if actual_align == 0 then
+        actual_align = 8
     end
 
     if self.current == nil then
-        var b = self:new_block(size + align_val)
+        var b = self:new_block(nbytes + actual_align)
         self.head = b
         self.current = b
     end
 
-    -- Align offset up to alignment boundary
     var curr = self.current
     var offset = curr.offset
-    var rem = offset % align_val
+    var rem = offset % actual_align
     if rem ~= 0 then
-        offset = offset + (align_val - rem)
+        offset = offset + (actual_align - rem)
     end
 
-    if offset + size <= curr.capacity then
+    if offset + nbytes <= curr.capacity then
         var ptr = &(curr.data[offset])
-        curr.offset = offset + size
+        curr.offset = offset + nbytes
         return [&opaque](ptr)
     end
 
-    -- Allocate a new block
-    var next_block = self:new_block(size + align_val)
+    var next_block = self:new_block(nbytes + actual_align)
     curr.next = next_block
     self.current = next_block
 
     var new_ptr = &(next_block.data[0])
-    next_block.offset = size
+    next_block.offset = nbytes
     return [&opaque](new_ptr)
 end
 
-terra Arena:reset() : void
+terra Arena:reset()
     var node = self.head
     while node ~= nil do
         node.offset = 0
@@ -118,12 +120,12 @@ terra Arena:reset() : void
     self.current = self.head
 end
 
-terra Arena:destroy() : void
+terra Arena:destroy()
     var node = self.head
     while node ~= nil do
         var next_node = node.next
         if node.data ~= nil then
-            alloc.aligned_free(node.data)
+            aligned_free_fn(node.data)
         end
         C.free(node)
         node = next_node
