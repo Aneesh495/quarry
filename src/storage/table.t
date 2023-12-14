@@ -6,6 +6,8 @@ local alloc = require("src.common.alloc")
 local types = require("src.types.type")
 local chunk = require("src.storage/chunk")
 
+local DataChunk = chunk.DataChunk
+
 local tbl = {}
 
 tbl.MAX_CHUNKS = 4096
@@ -23,7 +25,7 @@ struct Table {
     columns: TableColumnMeta[64],
     num_chunks: uint32,
     chunk_capacity: uint32,
-    chunks: &(&chunk.DataChunk),
+    chunks: &(&DataChunk),
     total_rows: uint64,
     default_chunk_size: uint32
 }
@@ -42,7 +44,7 @@ terra Table:init(name: &int8, num_cols: uint32, col_names: &(&int8), col_types: 
     self.total_rows = 0
     self.default_chunk_size = chunk.STANDARD_CHUNK_SIZE
 
-    self.chunks = [&(&chunk.DataChunk)](C.malloc(self.chunk_capacity * sizeof(&chunk.DataChunk)))
+    self.chunks = [&(&DataChunk)](C.malloc(self.chunk_capacity * 8))
 
     for i = 0, num_cols do
         C.strncpy(&(self.columns[i].name[0]), col_names[i], 63)
@@ -72,15 +74,15 @@ terra Table:get_column_types() : types.DataType[64]
     return dt_arr
 end
 
-terra Table:new_chunk() : &chunk.DataChunk
+terra Table:new_chunk() : &DataChunk
     if self.num_chunks >= self.chunk_capacity then
         var new_cap = self.chunk_capacity * 2
-        var new_chunks = [&(&chunk.DataChunk)](C.realloc(self.chunks, new_cap * sizeof(&chunk.DataChunk)))
+        var new_chunks = [&(&DataChunk)](C.realloc(self.chunks, new_cap * 8))
         self.chunks = new_chunks
         self.chunk_capacity = new_cap
     end
 
-    var c_ptr = [&chunk.DataChunk](C.malloc(sizeof(chunk.DataChunk)))
+    var c_ptr = [&DataChunk](C.malloc(sizeof(DataChunk)))
     var dt_arr = self:get_column_types()
     c_ptr:init(self.num_columns, &(dt_arr[0]), self.default_chunk_size)
 
@@ -89,7 +91,7 @@ terra Table:new_chunk() : &chunk.DataChunk
     return c_ptr
 end
 
-terra Table:get_or_create_active_chunk() : &chunk.DataChunk
+terra Table:get_or_create_active_chunk() : &DataChunk
     if self.num_chunks == 0 then
         return self:new_chunk()
     end
@@ -119,7 +121,7 @@ terra Table:append_row_i64_3(v0: int64, v1: int64, v2: int64)
     self.total_rows = self.total_rows + 1
 end
 
-terra Table:get_chunk(idx: uint32) : &chunk.DataChunk
+terra Table:get_chunk(idx: uint32) : &DataChunk
     if idx >= self.num_chunks then return nil end
     return self.chunks[idx]
 end
