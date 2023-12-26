@@ -257,6 +257,11 @@ terra Parser:parse_select() : &Statement
         end
         C.strncpy(&(sel.join_table[0]), &(self.prev.lexeme[0]), 63)
 
+        -- Optional join table alias
+        if self:check(token.TOKEN_IDENTIFIER) and not self:check(token.TOKEN_ON) then
+            self:advance()
+        end
+
         if not self:match_token(token.TOKEN_ON) then
             self:set_error("Expected ON condition in JOIN clause")
             return nil
