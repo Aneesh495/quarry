@@ -12,6 +12,10 @@ local ExprNode = ast.ExprNode
 
 local rules = {}
 
+struct ColNameBuf {
+    name: int8[64]
+}
+
 -- Constant folding pass: recursively evaluates constant subexpressions
 local terra fold_constants_fn(expr: &ExprNode) : &ExprNode
     if expr == nil then return nil end
@@ -81,21 +85,20 @@ local terra pushdown_predicates_fn(op: &LogicalOperator) : &LogicalOperator
 end
 
 -- Projection pruning: collects column names used in expr
-local terra collect_columns_in_expr(expr: &ExprNode, used_cols: &(int8[32][64]), used_count: &uint32)
+local terra collect_columns_in_expr(expr: &ExprNode, used_cols: &ColNameBuf, used_count: &uint32) : {}
     if expr == nil then return end
     if expr.expr_type == ast.EXPR_COLUMN_REF then
         var col_name = &(expr.column_name[0])
         if C.strcmp(col_name, "*") ~= 0 and col_name[0] ~= 0 then
-            -- Check if already present
             var found = false
             for i = 0, @used_count do
-                if C.strcmp(&(used_cols[i][0]), col_name) == 0 then
+                if C.strcmp(&(used_cols[i].name[0]), col_name) == 0 then
                     found = true
                     break
                 end
             end
             if not found and @used_count < 32 then
-                C.strncpy(&(used_cols[@used_count][0]), col_name, 63)
+                C.strncpy(&(used_cols[@used_count].name[0]), col_name, 63)
                 @used_count = @used_count + 1
             end
         end
