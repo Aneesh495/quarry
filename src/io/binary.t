@@ -8,6 +8,7 @@ local chunk = require("src.storage/chunk")
 local tbl = require("src.storage/table")
 
 local Table = tbl.Table
+local TableColumnMeta = tbl.TableColumnMeta
 local DataChunk = chunk.DataChunk
 
 local binary = {}
@@ -39,7 +40,7 @@ local terra save_table_fn(t: &Table, file_path: &int8) : bool
 
     -- Write column metadata
     for i = 0, t.num_columns do
-        C.write(fd, &(t.columns[i]), sizeof(tbl.TableColumnMeta))
+        C.write(fd, &(t.columns[i]), sizeof(TableColumnMeta))
     end
 
     -- Write chunk data
@@ -73,9 +74,9 @@ local terra load_table_fn(file_path: &int8, out_table: &Table) : bool
         return false
     end
 
-    var col_metas : tbl.TableColumnMeta[64]
+    var col_metas : TableColumnMeta[64]
     for i = 0, hdr.num_columns do
-        C.read(fd, &(col_metas[i]), sizeof(tbl.TableColumnMeta))
+        C.read(fd, &(col_metas[i]), sizeof(TableColumnMeta))
     end
 
     var col_names : (&int8)[64]

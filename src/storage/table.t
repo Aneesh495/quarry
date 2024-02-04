@@ -126,5 +126,6 @@ terra Table:get_chunk(idx: uint32) : &DataChunk
     return self.chunks[idx]
 end
 
+tbl.TableColumnMeta = TableColumnMeta
 tbl.Table = Table
 return tbl
