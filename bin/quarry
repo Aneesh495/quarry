@@ -1,0 +1,17 @@
+#!/bin/bash
+# Quarry CLI executable launcher
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export PATH="$HOME/.local/bin:$PATH"
+
+if ! command -v terra &> /dev/null; then
+    echo "Error: Terra binary not found in PATH (~/.local/bin/terra)."
+    exit 1
+fi
+
+cd "$SCRIPT_DIR"
+terra -e '
+local cli = require("src.cli/repl")
+cli.print_banner()
+print("Quarry engine ready. Launching session...")
+' "$@"

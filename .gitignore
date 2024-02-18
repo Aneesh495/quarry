@@ -1,5 +1,5 @@
 # Build artifacts and binaries
-bin/quarry
+# bin/quarry
 lib/*.dylib
 lib/*.so
 lib/*.a
