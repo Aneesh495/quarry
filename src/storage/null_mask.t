@@ -71,10 +71,15 @@ end
 terra ValidityMask:count_valid() : uint32
     if self.all_valid then return self.num_bits end
     var count : uint32 = 0
-    for i = 0, self.num_words do
+    var full_words = self.num_bits >> 6
+    for i = 0, full_words do
         count = count + bits.popcount64(self.words[i])
     end
-    if count > self.num_bits then count = self.num_bits end
+    var rem = self.num_bits and 63
+    if rem ~= 0 then
+        var mask = (1ULL << rem) - 1ULL
+        count = count + bits.popcount64(self.words[full_words] and mask)
+    end
     return count
 end
 
