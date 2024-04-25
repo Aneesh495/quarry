@@ -10,8 +10,44 @@ if ! command -v terra &> /dev/null; then
 fi
 
 cd "$SCRIPT_DIR"
+
+if [ "$1" == "--version" ] || [ "$1" == "-v" ]; then
+    echo "Quarry Columnar OLAP Engine & Vector Database v1.0.0 (Terra LLVM JIT)"
+    exit 0
+fi
+
+if [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
+    echo "Usage: quarry [options] [query]"
+    echo ""
+    echo "Options:"
+    echo "  -c, --command <sql>  Execute SQL query and exit"
+    echo "  -v, --version        Display engine version"
+    echo "  -h, --help           Display this help guide"
+    echo ""
+    echo "Interactive Shell:"
+    echo "  quarry               Start interactive SQL REPL console"
+    exit 0
+fi
+
+if [ "$1" == "-c" ] || [ "$1" == "--command" ]; then
+    QUERY="$2"
+    terra -e '
+    local c_api = require("src.c_api/quarry_c")
+    local db = c_api.quarry_open(nil)
+    local query = [==['"$QUERY"']==]
+    local err = c_api.quarry_exec(db, query)
+    if err == 0 then
+        print("Query executed successfully.")
+    else
+        print("Query error (" .. tostring(err) .. ")")
+    end
+    c_api.quarry_close(db)
+    '
+    exit 0
+fi
+
 terra -e '
 local cli = require("src.cli/repl")
 cli.print_banner()
-print("Quarry engine ready. Launching session...")
+print("Quarry engine ready. Type .help or SQL statements.")
 ' "$@"
