@@ -93,15 +93,22 @@ terra quarry_prepare(db: &quarry_db, sql: &int8) : &quarry_stmt
     var optimized = rules.optimize_plan(l_root)
 
     var target_table = db.catalog:get_table(&(stmt.select_stmt.from_table[0]))
-    if target_table == nil or target_table.num_chunks == 0 then return nil end
+    if target_table == nil then return nil end
 
     var s = [&quarry_stmt](C.malloc(sizeof(quarry_stmt)))
     s.db = db
-    s.active_chunk = target_table:get_chunk(0)
+    if target_table.num_chunks > 0 then
+        s.active_chunk = target_table:get_chunk(0)
+        s.total_rows = s.active_chunk.num_rows
+        s.num_columns = s.active_chunk.num_columns
+        s.is_completed = false
+    else
+        s.active_chunk = nil
+        s.total_rows = 0
+        s.num_columns = target_table.num_columns
+        s.is_completed = true
+    end
     s.current_row = 0
-    s.total_rows = s.active_chunk.num_rows
-    s.num_columns = s.active_chunk.num_columns
-    s.is_completed = false
     return s
 end
 
