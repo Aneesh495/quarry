@@ -1,4 +1,4 @@
-# Build artifacts and binaries
+tests/test_c_api_bin
 # bin/quarry
 lib/*.dylib
 lib/*.so
