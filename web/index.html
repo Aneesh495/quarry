@@ -174,108 +174,49 @@
             font-size: 12px;
             color: var(--text-secondary);
         }
+
+        main { max-width: 1050px; margin: auto; }
+        h1 { font-size: clamp(2.2rem, 6vw, 4.5rem); letter-spacing: -.045em; line-height: 1; margin: .5em 0 .2em; }
+        h2 { font-size: 1.15rem; margin-bottom: .75rem; }
+        p, li { color: #b3c2d1; line-height: 1.6; }
+        .intro { margin: 1rem 0 1.5rem; max-width: 68ch; }
+        .record { overflow-x: auto; }
+        .record table { min-width: 28rem; }
+        details { padding: .75rem 0; border-top: 1px solid var(--border-color); }
+        summary { cursor: pointer; }
+        details p { margin: .5rem 0 0; }
+        .label { color: var(--accent-cyan); font-size: .78rem; letter-spacing: .14em; }
+        a { color: #8fe7fb; }
+        pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #0a0c10; padding: 1rem; margin-top: .75rem; }
+        :focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 4px; }
     </style>
 </head>
-<body>
-    <div class="header">
-        <div class="logo">QUARRY // JIT OLAP & VECTOR ENGINE</div>
-        <div class="badge">LLVM 1.2.2 JIT ACTIVE</div>
-    </div>
-
-    <div class="grid">
-        <div>
-            <div class="card">
-                <div class="card-title">SQL Query Editor</div>
-                <textarea id="sqlInput">SELECT l_returnflag, l_linestatus, SUM(l_quantity) AS sum_qty, SUM(l_extendedprice) AS sum_base_price, AVG(l_extendedprice) AS avg_price FROM lineitem WHERE l_shipdate <= '1998-09-02' GROUP BY l_returnflag, l_linestatus ORDER BY l_returnflag, l_linestatus;</textarea>
-                <div class="btn-bar">
-                    <span style="font-size: 12px; color: var(--text-secondary);">Preset: TPC-H Query 1 (Pricing Summary)</span>
-                    <button class="btn" onclick="executeSimulatedQuery()">Execute Query (JIT)</button>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">Compiled Execution Pipeline DAG</div>
-                <div class="pipeline-dag" id="pipelineDag">
-                    <div class="pipeline-node">LogicalScan<br><small style="color: var(--text-secondary);">lineitem</small></div>
-                    <div class="arrow">&rarr;</div>
-                    <div class="pipeline-node" style="border-color: var(--accent-green);">Fused JIT Kernel<br><small style="color: var(--accent-green);">Filter + Hash Probe</small></div>
-                    <div class="arrow">&rarr;</div>
-                    <div class="pipeline-node">Hash Aggregate<br><small style="color: var(--text-secondary);">In-Register Sink</small></div>
-                    <div class="arrow">&rarr;</div>
-                    <div class="pipeline-node">PhysicalSort<br><small style="color: var(--text-secondary);">Radix Sort</small></div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">Query Results</div>
-                <div id="resultsTableContainer">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>l_returnflag</th>
-                                <th>l_linestatus</th>
-                                <th>sum_qty</th>
-                                <th>sum_base_price</th>
-                                <th>avg_price</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr><td>A</td><td>F</td><td>37,734,107</td><td>56,586,554,400.73</td><td>38,236.11</td></tr>
-                            <tr><td>N</td><td>F</td><td>991,417</td><td>1,487,504,710.38</td><td>38,284.47</td></tr>
-                            <tr><td>N</td><td>O</td><td>74,476,023</td><td>111,701,708,128.02</td><td>38,249.12</td></tr>
-                            <tr><td>R</td><td>F</td><td>37,719,753</td><td>56,568,041,180.90</td><td>38,250.85</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div>
-            <div class="card">
-                <div class="card-title">Real-Time Engine Telemetry</div>
-                <div style="margin-bottom: 20px;">
-                    <div class="metric-val" id="execTime">12.4 us</div>
-                    <div class="metric-sub">Execution Latency (Fused JIT Loop)</div>
-                </div>
-                <div style="margin-bottom: 20px;">
-                    <div class="metric-val">42.8x</div>
-                    <div class="metric-sub">Speedup vs Interpreted Volcano Engine</div>
-                </div>
-                <div style="margin-bottom: 20px;">
-                    <div class="metric-val">128M / s</div>
-                    <div class="metric-sub">Row Scanning Throughput per Core</div>
-                </div>
-                <div>
-                    <div class="metric-val">0 bytes</div>
-                    <div class="metric-sub">Intermediate Pipeline Memory Allocations</div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">System Catalog</div>
-                <div style="font-family: var(--font-mono); font-size: 13px;">
-                    <div style="padding: 6px 0; border-bottom: 1px solid var(--border-color);">
-                        <strong>lineitem</strong> <span style="color: var(--text-secondary);">(6,001,215 rows)</span>
-                    </div>
-                    <div style="padding: 6px 0; border-bottom: 1px solid var(--border-color);">
-                        <strong>orders</strong> <span style="color: var(--text-secondary);">(1,500,000 rows)</span>
-                    </div>
-                    <div style="padding: 6px 0; border-bottom: 1px solid var(--border-color);">
-                        <strong>customer</strong> <span style="color: var(--text-secondary);">(150,000 rows)</span>
-                    </div>
-                    <div style="padding: 6px 0;">
-                        <strong>embeddings</strong> <span style="color: var(--accent-green);">(HNSW 384-dim)</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function executeSimulatedQuery() {
-            const timeEl = document.getElementById('execTime');
-            timeEl.innerText = (Math.random() * 5 + 8).toFixed(1) + ' us';
-        }
-    </script>
-</body>
-</html>
+<body><main>
+    <p class="label">QUARRY / EXECUTION EVIDENCE</p>
+    <h1>Inside a fused column scan</h1>
+    <p class="intro">Quarry stores typed data in columns. This recorded Terra microbenchmark reads one million synthetic rows and compares a function-pointer loop with a fused loop that projects, filters, and accumulates in one pass.</p>
+    <section class="card record">
+        <h2>One recorded native run</h2>
+        <p>Apple Silicon on macOS. These are elapsed loop times from one run, outside the SQL planner and compile path.</p>
+        <table><thead><tr><th scope="col">Loop</th><th scope="col">Time (µs)</th><th scope="col">M rows/s</th><th scope="col">Sum</th></tr></thead>
+        <tbody><tr><th scope="row">Function pointers</th><td>5230.00</td><td>191.20</td><td>43730000</td></tr><tr><th scope="row">Fused Terra</th><td>2617.00</td><td>382.12</td><td>43730000</td></tr></tbody></table>
+    </section>
+    <section class="card">
+        <h2>Follow the data</h2>
+        <details open><summary>1. Scan price and discount columns</summary><p>Each iteration reads the corresponding values from two contiguous integer buffers.</p></details>
+        <details><summary>2. Project and filter</summary><p>The benchmark computes <code>price * (100 - discount) / 100</code> with integer arithmetic and keeps values above 50.</p></details>
+        <details><summary>3. Accumulate</summary><p>Both loops produce the same sum. The fused loop accumulates immediately without materializing a filtered buffer.</p></details>
+    </section>
+    <section class="card">
+        <h2>Check the JIT separately</h2>
+        <p>These native tests exercise emitted kernels and cache behavior. Run the same commands from the linked revision.</p>
+        <pre>=== Running Quarry JIT Query Compilation Tests ===
+PASS: JIT Fused single-loop filter and sum aggregation kernel
+PASS: JIT Fused filter and in-register expression projection kernel
+PASS: JIT Kernel cache hit/miss amortizing LLVM compilation
+=== ALL JIT TESTS PASSED (3/3) ===</pre>
+        <pre><code>terra benches/bench_jit_vs_interp.t
+terra tests/test_jit_codegen.t</code></pre>
+        <p><a href="https://github.com/Aneesh495/quarry/tree/dd964efdda97ac4ad8f4241e40a16c6464a48814">Source revision and build instructions</a></p>
+    </section>
+</main></body></html>
